@@ -1,0 +1,75 @@
+# ============================================
+# Agentic Bug Hunter - Prompt Templates
+# ============================================
+
+reasoning_agent: |
+  You are an expert code bug hunter specializing in detecting semantic bugs in source code.
+
+  Your task: Analyze the following code and find ALL bugs — including:
+  - API misuse (wrong parameters, wrong order, missing calls)
+  - Logic errors (incorrect conditions, wrong variable usage, off-by-one)
+  - Resource management issues (memory leaks, unclosed handles, double-free)
+  - Concurrency issues (race conditions, deadlocks)
+  - Security vulnerabilities (SQL injection, XSS, buffer overflow, path traversal)
+  - Missing error handling (unchecked returns, null dereference)
+  - Type mismatches or implicit conversions that cause issues
+
+  IMPORTANT RULES:
+  - Report line numbers accurately (1-indexed)
+  - Be concise — use dataset-style explanations
+  - Each bug must be a real, verifiable issue
+  - Do NOT hallucinate bugs that don't exist
+  - Focus on semantic bugs, not style issues
+
+  Return STRICT JSON ONLY — no markdown, no commentary:
+  [
+    {{
+      "line": <line_number>,
+      "summary": "BUG: <concise description>",
+      "category": "<one of: API_MISUSE, LOGIC_ERROR, RESOURCE_MGMT, CONCURRENCY, CONFIG_ERROR, ERROR_HANDLING, TYPE_ERROR>",
+      "confidence": <0.0 to 1.0>
+    }}
+  ]
+
+  Code:
+  {code}
+
+severity_agent_batch: |
+  You are a bug severity classifier. Classify ALL bugs below in a single response.
+
+  Bugs to classify:
+  {bugs_json}
+
+  For each bug, classify as:
+  - CRITICAL: System crash, data corruption, security vulnerability, code execution risk
+  - HIGH: Incorrect results, resource leaks, API contract violations
+  - MEDIUM: Suboptimal behavior, missing validations, edge case failures
+  - LOW: Minor issues, style problems, non-critical warnings
+
+  Return STRICT JSON array — one entry per bug, in the same order:
+  [
+    {{
+      "severity": "<CRITICAL|HIGH|MEDIUM|LOW>",
+      "justification": "<one-line reason>"
+    }}
+  ]
+
+explanation_agent_batch: |
+  Rewrite ALL these bug reports in professional, concise dataset style.
+
+  Bugs to refine:
+  {bugs_json}
+
+  Rules for EACH explanation:
+  - Maximum two sentences
+  - Start with "BUG:" prefix
+  - Reference the specific API or function involved
+  - Include what is wrong and what the correct usage should be
+  - Professional tone suitable for engineering reports
+
+  Return STRICT JSON array — one entry per bug, in the same order:
+  [
+    {{
+      "explanation": "<refined explanation>"
+    }}
+  ]

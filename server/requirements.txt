@@ -1,0 +1,8 @@
+# MCP Server Requirements
+# Install these separately to run the Infineon MCP server
+
+llama-index>=0.10
+llama-index-embeddings-huggingface>=0.2
+huggingface-hub>=0.20
+torch>=2.0
+fastmcp>=0.1.0

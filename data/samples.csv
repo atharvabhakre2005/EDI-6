@@ -1,0 +1,87 @@
+ID,Code
+S001,"#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+char* get_user_greeting(const char* name) {
+    char buffer[64];
+    sprintf(buffer, ""Hello, %s! Welcome back."", name);
+    return buffer;
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) return 1;
+
+    char* msg = get_user_greeting(argv[1]);
+    printf(""%s\n"", msg);
+
+    int* scores = (int*)malloc(10 * sizeof(int));
+    for (int i = 0; i <= 10; i++) {
+        scores[i] = i * 10;
+    }
+
+    int total = 0;
+    for (int i = 0; i < 10; i++) {
+        total += scores[i];
+    }
+    printf(""Total: %d\n"", total);
+
+    char dest[16];
+    strcpy(dest, argv[1]);
+
+    FILE* fp = fopen(""config.txt"", ""r"");
+    char line[256];
+    fgets(line, sizeof(line), fp);
+    printf(""Config: %s\n"", line);
+
+    free(scores);
+    free(scores);
+
+    return 0;
+}"
+S002,"import java.sql.*;
+import java.util.*;
+
+public class UserService {
+
+    private Connection conn;
+
+    public UserService(String dbUrl) throws SQLException {
+        conn = DriverManager.getConnection(dbUrl);
+    }
+
+    public String getUserEmail(String username) throws SQLException {
+        String query = ""SELECT email FROM users WHERE username = '"" + username + ""'"";
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(query);
+        if (rs.next()) {
+            return rs.getString(""email"");
+        }
+        return null;
+    }
+
+    public List<String> getAllUsernames() throws SQLException {
+        List<String> names = new ArrayList<>();
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(""SELECT username FROM users"");
+        while (rs.next()) {
+            names.add(rs.getString(""username""));
+        }
+        return names;
+    }
+
+    public void deleteUser(String userId) throws SQLException {
+        Statement stmt = conn.createStatement();
+        stmt.executeUpdate(""DELETE FROM users WHERE id = '"" + userId + ""'"");
+    }
+
+    public boolean authenticate(String user, String pass) throws SQLException {
+        String query = ""SELECT password FROM users WHERE username = '"" + user + ""'"";
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(query);
+        if (rs.next()) {
+            return rs.getString(""password"").equals(pass);
+        }
+        return false;
+    }
+}"

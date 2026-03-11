@@ -1,0 +1,54 @@
+# ============================================
+# Agentic Bug Hunter - Configuration
+# ============================================
+
+# LLM Settings
+llm:
+  provider: "gemini"
+  model: "gemini-2.5-flash-lite"
+  temperature: 0.1
+  max_tokens: 4096
+  retry_attempts: 5
+  retry_delay: 15 # seconds
+
+# MCP Server Settings
+mcp:
+  server_url: "http://127.0.0.1:8003/sse"
+  timeout: 30
+  similarity_top_k: 20
+
+# Agent Pipeline Settings
+agents:
+  reasoning:
+    enabled: true
+    max_bugs_per_sample: 15
+  mcp_knowledge:
+    enabled: true
+    min_relevance_score: 0.3
+  severity:
+    enabled: true
+  explanation:
+    enabled: true
+    max_length: 200 # chars
+
+# Report Settings
+reports:
+  output_dir: "data/outputs"
+  formats:
+    - csv
+    - html
+    - json
+  include_timestamp: true
+
+# Logging
+logging:
+  level: "INFO"
+  file: "logs/bug_hunter.log"
+  console: true
+  structured: true
+
+# Dashboard
+dashboard:
+  title: "Agentic Bug Hunter"
+  theme: "dark"
+  port: 8501

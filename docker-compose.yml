@@ -1,0 +1,26 @@
+services:
+  # Agentic Bug Hunter Dashboard
+  dashboard:
+    build: .
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      - mcp-server
+    restart: unless-stopped
+
+  # Infineon MCP Server
+  mcp-server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./server/storage:/app/server/storage
+      - ./server/embedding_model:/app/server/embedding_model
+    restart: unless-stopped
