@@ -1,0 +1,45 @@
+CWE-825: Expired Pointer Dereference (Dangling Pointer)
+
+Description:
+A dangling pointer is a pointer that references memory that has been freed or is no longer valid. Dereferencing a dangling pointer leads to undefined behavior including crashes, data corruption, or code execution. This commonly occurs with returning stack-local variables, realloc that moves memory, and pointer aliasing after free.
+
+Common Vulnerable Patterns:
+- Returning a pointer to a local (stack) variable from a function
+- Using an alias pointer after realloc moves the original memory block
+- Storing pointers to objects that go out of scope
+- Iterator invalidation in C++ containers after modification
+
+Example of Vulnerable Code:
+    // Returning pointer to local variable
+    char* get_greeting(const char* name) {
+        char buffer[64];
+        sprintf(buffer, "Hello, %s!", name);
+        return buffer;  // buffer is on the stack, invalid after return
+    }
+
+    // Dangling pointer via realloc
+    int* arr = (int*)malloc(5 * sizeof(int));
+    int* alias = arr;
+    arr = (int*)realloc(arr, 50 * sizeof(int));  // may move memory
+    alias[0] = 42;  // dangling if realloc moved the block
+
+Fix:
+    // Use heap allocation instead of returning stack pointer
+    char* get_greeting(const char* name) {
+        char* buffer = (char*)malloc(256);
+        if (buffer == NULL) return NULL;
+        snprintf(buffer, 256, "Hello, %s!", name);
+        return buffer;  // Caller must free
+    }
+
+    // Update all aliases after realloc
+    int* arr = (int*)malloc(5 * sizeof(int));
+    arr = (int*)realloc(arr, 50 * sizeof(int));
+    if (arr == NULL) { /* handle error */ }
+    // Don't keep old aliases
+
+Severity: HIGH
+Impact: Undefined behavior, crashes, potential code execution
+CWE URL: https://cwe.mitre.org/data/definitions/825.html
+
+Related CWEs: CWE-416 (Use After Free), CWE-562 (Return of Stack Variable Address)

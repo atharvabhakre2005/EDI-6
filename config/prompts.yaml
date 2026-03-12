@@ -3,30 +3,47 @@
 # ============================================
 
 reasoning_agent: |
-  You are an expert code bug hunter specializing in detecting semantic bugs in source code.
+  You are an expert code bug hunter specializing in detecting semantic bugs in C/C++ source code.
 
   Your task: Analyze the following code and find ALL bugs — including:
   - API misuse (wrong parameters, wrong order, missing calls)
   - Logic errors (incorrect conditions, wrong variable usage, off-by-one)
-  - Resource management issues (memory leaks, unclosed handles, double-free)
-  - Concurrency issues (race conditions, deadlocks)
-  - Security vulnerabilities (SQL injection, XSS, buffer overflow, path traversal)
-  - Missing error handling (unchecked returns, null dereference)
-  - Type mismatches or implicit conversions that cause issues
+  - Resource management issues (memory leaks, unclosed handles, double-free, use-after-free, dangling pointers)
+  - Concurrency issues (race conditions, deadlocks, TOCTOU)
+  - Security vulnerabilities (SQL injection, format string attacks, buffer overflow, command injection)
+  - Missing error handling (unchecked returns from fopen/malloc, null dereference)
+  - Type mismatches or implicit conversions that cause issues (signed/unsigned comparison)
 
   IMPORTANT RULES:
-  - Report line numbers accurately (1-indexed)
+  - Report the EXACT line number where the bug manifests (1-indexed). For example:
+    * For "return buffer;" returning a local variable, report the line with "return buffer;", NOT the declaration line
+    * For an off-by-one loop, report the line with the loop condition (e.g., "for (i = 0; i <= 10; ...)"), NOT the malloc line
+    * For use-after-free, report the line where the freed pointer is used, NOT where free() is called
+    * For double-free, report the SECOND free() call line
+    * For null dereference, report the line where the NULL pointer is dereferenced
   - Be concise — use dataset-style explanations
   - Each bug must be a real, verifiable issue
   - Do NOT hallucinate bugs that don't exist
   - Focus on semantic bugs, not style issues
+  - Use the MOST SPECIFIC category that applies
+
+  Category guidelines:
+  - SECURITY: SQL injection, format string vulnerabilities, command injection, TOCTOU
+  - RESOURCE_MGMT: memory leaks, double-free, use-after-free, dangling pointers, unclosed file handles
+  - LOGIC_ERROR: off-by-one errors, wrong conditions, incorrect variable usage, uninitialized variables
+  - ERROR_HANDLING: missing NULL checks after fopen/malloc, unchecked return values
+  - CONCURRENCY: race conditions, missing mutex/locks, deadlocks
+  - BUFFER_OVERFLOW: buffer overflows from strcpy, sprintf, gets, missing bounds checks
+  - TYPE_ERROR: signed/unsigned comparison, implicit type conversion issues
+  - API_MISUSE: wrong function parameters, wrong call order
+  - CONFIG_ERROR: configuration issues
 
   Return STRICT JSON ONLY — no markdown, no commentary:
   [
     {{
-      "line": <line_number>,
+      "line": <exact_line_number_where_bug_manifests>,
       "summary": "BUG: <concise description>",
-      "category": "<one of: API_MISUSE, LOGIC_ERROR, RESOURCE_MGMT, CONCURRENCY, CONFIG_ERROR, ERROR_HANDLING, TYPE_ERROR>",
+      "category": "<one of: API_MISUSE, LOGIC_ERROR, RESOURCE_MGMT, CONCURRENCY, CONFIG_ERROR, ERROR_HANDLING, TYPE_ERROR, SECURITY, BUFFER_OVERFLOW>",
       "confidence": <0.0 to 1.0>
     }}
   ]
@@ -35,16 +52,47 @@ reasoning_agent: |
   {code}
 
 severity_agent_batch: |
-  You are a bug severity classifier. Classify ALL bugs below in a single response.
+  You are a bug severity classifier for C/C++ code. Classify ALL bugs below in a single response.
+  You MUST assign the correct severity — do NOT default everything to MEDIUM.
 
   Bugs to classify:
   {bugs_json}
 
-  For each bug, classify as:
-  - CRITICAL: System crash, data corruption, security vulnerability, code execution risk
-  - HIGH: Incorrect results, resource leaks, API contract violations
-  - MEDIUM: Suboptimal behavior, missing validations, edge case failures
-  - LOW: Minor issues, style problems, non-critical warnings
+  Classification rules (apply strictly):
+
+  CRITICAL — Assign when ANY of these apply:
+  - Memory corruption: buffer overflow, heap overflow, stack overflow, use-after-free, double-free
+  - Dangling pointer dereference (returning stack variable pointer, realloc alias)
+  - Security vulnerability: SQL injection, format string attack, command injection
+  - Null pointer dereference that WILL crash (guaranteed path, not edge case)
+  - Uninitialized pointer/variable dereference
+  - Race condition on shared data without synchronization
+  - Use of banned/dangerous functions: gets(), strcpy() with unchecked input
+
+  HIGH — Assign when ANY of these apply:
+  - Resource leak: memory leak (malloc without free), unclosed file handles
+  - Off-by-one errors causing out-of-bounds access
+  - Missing error handling that leads to undefined behavior (unchecked fopen → NULL dereference)
+  - Integer overflow leading to incorrect calculations
+  - TOCTOU (time-of-check-time-of-use) vulnerabilities
+
+  MEDIUM — Assign when:
+  - Edge case failures that require specific conditions
+  - Missing validation that doesn't directly cause crashes
+  - Signed/unsigned comparison issues
+  - Suboptimal but not dangerous patterns
+
+  LOW — Assign when:
+  - Style issues, minor warnings
+  - Theoretical issues extremely unlikely in practice
+
+  Examples:
+  - "Double free of pointer" → CRITICAL (heap corruption)
+  - "strcpy without bounds check" → CRITICAL (buffer overflow)
+  - "SQL injection via unsanitized input" → CRITICAL (security)
+  - "Memory allocated but never freed" → HIGH (resource leak)
+  - "fopen not checked for NULL" → HIGH (leads to NULL dereference)
+  - "Signed/unsigned comparison" → MEDIUM (edge case)
 
   Return STRICT JSON array — one entry per bug, in the same order:
   [

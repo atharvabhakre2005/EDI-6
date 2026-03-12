@@ -1,0 +1,52 @@
+CERT C Secure Coding Guidelines - Summary of Key Rules
+
+MEM30-C: Do not access freed memory
+After calling free() on a pointer, do not read or write through that pointer. Set the pointer to NULL after freeing to prevent accidental use-after-free and double-free bugs.
+
+MEM31-C: Free dynamically allocated memory when no longer needed
+Every call to malloc(), calloc(), or realloc() must have a corresponding free() call. Memory leaks degrade performance and can lead to denial of service.
+
+MEM34-C: Only free memory allocated dynamically
+Do not call free() on stack variables, string literals, or pointers not returned by malloc/calloc/realloc.
+
+MEM35-C: Allocate sufficient memory for an object
+Always ensure that allocated memory is large enough for the intended use. Off-by-one errors in size calculations (e.g., forgetting null terminator space) are a common source of buffer overflows.
+
+STR31-C: Guarantee that storage for strings has sufficient space for data and null terminator
+When copying or constructing strings, always account for the null terminator byte. Use strnlen(), snprintf(), and explicit size checks.
+
+ARR30-C: Do not form or use out-of-bounds pointers or array subscripts
+Array indices must be within bounds [0, size-1]. Off-by-one errors (using <= instead of <) are the most common violation.
+
+ARR38-C: Guarantee that library functions do not form invalid pointers
+Functions like strcpy(), strcat(), sprintf() do not check bounds. Use safer alternatives: strncpy(), strncat(), snprintf().
+
+EXP33-C: Do not read uninitialized memory
+Always initialize variables before use. In C, local variables contain indeterminate values unless explicitly initialized.
+
+EXP34-C: Do not dereference null pointers
+Always check pointers for NULL before dereferencing, especially return values from malloc(), fopen(), and other functions that may return NULL.
+
+FIO42-C: Close files when they are no longer needed
+Every fopen() should have a matching fclose(). Resource leaks can exhaust file descriptor limits.
+
+ERR33-C: Detect and handle standard library errors
+Always check return values of functions like malloc(), fopen(), fread(), fwrite(), etc. for error conditions.
+
+INT30-C: Ensure that unsigned integer operations do not wrap
+Check for potential overflow/underflow before performing arithmetic on unsigned integers.
+
+INT32-C: Ensure that operations on signed integers do not result in overflow
+Signed integer overflow is undefined behavior in C. Always validate operands before arithmetic.
+
+CON33-C: Avoid race conditions when using library functions
+Use thread-safe alternatives or proper synchronization (mutexes) when accessing shared resources from multiple threads.
+
+POS35-C: Avoid race conditions while checking for the existence of a symbolic link
+TOCTOU (Time-of-Check to Time-of-Use) vulnerabilities occur when a file is checked then used non-atomically. Use atomic operations like open() with O_CREAT | O_EXCL.
+
+ENV33-C: Do not call system()
+The system() function invokes a shell, making it vulnerable to command injection. Use exec() family functions instead.
+
+FIO30-C: Exclude user input from format strings
+Never pass user-controlled strings as format strings to printf(), fprintf(), syslog(), etc. Always use explicit format specifiers like printf("%s", user_input).

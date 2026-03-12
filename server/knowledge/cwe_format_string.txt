@@ -1,0 +1,29 @@
+CWE-134: Use of Externally-Controlled Format String
+
+Description:
+The software uses a function that accepts a format string as an argument, but the format string originates from an external source. An attacker can supply format specifiers (%s, %x, %n) to read from or write to memory, crash the program, or execute arbitrary code.
+
+In C/C++, functions that use format strings include: printf(), fprintf(), sprintf(), snprintf(), syslog(), and scanf() family.
+
+Common Vulnerable Patterns:
+- Passing user input directly as the format string to printf: printf(user_input)
+- Using user-controlled strings in sprintf/fprintf without a format specifier
+- Logging user input directly: syslog(LOG_ERR, user_input)
+
+Example of Vulnerable Code:
+    // Format string vulnerability
+    printf(argv[1]);       // Attacker can pass "%x%x%x%x" to leak stack data
+    fprintf(stderr, msg);  // If msg is user-controlled, this is exploitable
+
+    // Attacker input: "%s%s%s%s%s" -> reads invalid memory, crashes
+    // Attacker input: "%n" -> writes to memory, potential code execution
+
+Fix:
+    printf("%s", argv[1]);       // Always use a format specifier
+    fprintf(stderr, "%s", msg);  // Never pass user data as format string
+
+Severity: HIGH to CRITICAL
+Impact: Information disclosure (stack/memory leak), arbitrary code execution, denial of service
+CWE URL: https://cwe.mitre.org/data/definitions/134.html
+
+Related CWEs: CWE-20 (Improper Input Validation)

@@ -1,0 +1,48 @@
+CWE-190: Integer Overflow or Wraparound
+
+Description:
+An integer overflow occurs when an arithmetic operation attempts to create a numeric value that is outside the range that can be represented by the data type. In C/C++, signed integer overflow is undefined behavior, while unsigned integers wrap around. This can lead to incorrect calculations, buffer overflows, and security vulnerabilities.
+
+Common Vulnerable Patterns:
+- Adding to INT_MAX (2147483647 for 32-bit signed int) causing wraparound to negative
+- Multiplying large integers without overflow checking
+- Using integer results for memory allocation sizes (can allocate tiny buffer for large data)
+- Signed/unsigned comparison issues where negative values compare as large positive
+
+Example of Vulnerable Code:
+    int a = 2147483647;  // INT_MAX
+    int b = a + 1;       // Undefined behavior: signed overflow
+    printf("Result: %d\n", b);  // Likely prints -2147483648
+
+    // Dangerous for allocation:
+    int count = user_input;  // Could be very large
+    int size = count * sizeof(int);  // Could overflow to small value
+    int* arr = malloc(size);  // Allocates tiny buffer
+    // Writing count elements overflows the buffer
+
+    // Signed/unsigned comparison:
+    unsigned int len = 10;
+    int index = -1;
+    if (index < len) { ... }  // -1 becomes large unsigned, comparison fails
+
+Fix:
+    // Check before arithmetic
+    if (a > INT_MAX - 1) {
+        // Handle overflow
+    }
+    int b = a + 1;
+
+    // Safe allocation
+    if (count > SIZE_MAX / sizeof(int)) {
+        // Handle overflow
+    }
+    size_t size = (size_t)count * sizeof(int);
+
+    // Use same signedness for comparison
+    if (index >= 0 && (unsigned int)index < len) { ... }
+
+Severity: MEDIUM to HIGH
+Impact: Buffer overflow, incorrect calculations, denial of service, potential code execution
+CWE URL: https://cwe.mitre.org/data/definitions/190.html
+
+Related CWEs: CWE-191 (Integer Underflow), CWE-681 (Incorrect Conversion between Numeric Types), CWE-195 (Signed to Unsigned Conversion Error)

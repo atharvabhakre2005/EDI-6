@@ -1,0 +1,45 @@
+CWE-457: Use of Uninitialized Variable
+
+Description:
+The code uses a variable that has not been initialized, leading to unpredictable behavior. In C/C++, local variables on the stack are not automatically initialized and contain whatever data was previously in that memory location. Using uninitialized variables can lead to crashes, incorrect logic, and information disclosure.
+
+Common Vulnerable Patterns:
+- Declaring a pointer without initializing it, then dereferencing it
+- Using a variable before assigning it a value in all code paths
+- Partially initialized structs or arrays
+- Relying on stack memory to be zeroed (it is not)
+
+Example of Vulnerable Code:
+    int* data;              // Uninitialized pointer
+    printf("%d\n", *data);  // Dereferences garbage address -> crash or worse
+
+    int result;
+    if (condition)
+        result = compute();
+    printf("%d\n", result);  // Uninitialized if condition is false
+
+    struct config cfg;
+    cfg.name = "test";
+    // cfg.timeout not set
+    use_config(&cfg);  // Reads uninitialized timeout field
+
+Fix:
+    int* data = NULL;       // Initialize to NULL
+    if (data != NULL)
+        printf("%d\n", *data);
+
+    int result = 0;  // Always initialize
+    if (condition)
+        result = compute();
+    printf("%d\n", result);
+
+    struct config cfg = {0};  // Zero-initialize all fields
+    cfg.name = "test";
+    cfg.timeout = 30;
+    use_config(&cfg);
+
+Severity: MEDIUM to HIGH
+Impact: Undefined behavior, crashes, information disclosure, incorrect program logic
+CWE URL: https://cwe.mitre.org/data/definitions/457.html
+
+Related CWEs: CWE-908 (Use of Uninitialized Resource), CWE-824 (Access of Uninitialized Pointer)

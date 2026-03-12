@@ -1,0 +1,33 @@
+CWE-120: Buffer Copy without Checking Size of Input (Classic Buffer Overflow)
+
+Description:
+The program copies an input buffer to an output buffer without verifying that the size of the input buffer is less than the size of the output buffer, leading to a buffer overflow.
+
+This is a very common vulnerability in C and C++ programs. Functions like strcpy(), strcat(), sprintf(), gets() do not check buffer boundaries.
+
+Common Vulnerable Patterns:
+- Using strcpy() to copy user input into a fixed-size buffer without length checking
+- Using sprintf() without bounds checking (use snprintf instead)
+- Using gets() which has no length limit (use fgets instead)
+- Loops that write beyond array bounds (off-by-one errors with <= instead of <)
+
+Example of Vulnerable Code:
+    char dest[16];
+    strcpy(dest, user_input);  // No bounds check, overflow if input > 15 chars
+
+    char buffer[64];
+    sprintf(buffer, "Hello, %s!", name);  // Overflow if name is too long
+
+Fix:
+    char dest[16];
+    strncpy(dest, user_input, sizeof(dest) - 1);
+    dest[sizeof(dest) - 1] = '\0';
+
+    char buffer[64];
+    snprintf(buffer, sizeof(buffer), "Hello, %s!", name);
+
+Severity: HIGH to CRITICAL
+Impact: Arbitrary code execution, denial of service, data corruption
+CWE URL: https://cwe.mitre.org/data/definitions/120.html
+
+Related CWEs: CWE-119 (Improper Restriction of Operations within the Bounds of a Memory Buffer), CWE-787 (Out-of-bounds Write), CWE-788 (Access of Memory Location After End of Buffer)

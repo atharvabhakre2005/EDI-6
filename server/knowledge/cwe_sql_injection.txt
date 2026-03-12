@@ -1,0 +1,40 @@
+CWE-89: SQL Injection (Improper Neutralization of Special Elements used in an SQL Command)
+
+Description:
+SQL injection occurs when user-supplied data is inserted into an SQL query without proper sanitization or parameterization. An attacker can manipulate the query to access, modify, or delete unauthorized data, bypass authentication, or execute administrative operations on the database.
+
+In C/C++ programs, this typically happens when user input is concatenated into SQL query strings using sprintf(), strcat(), or string formatting before being passed to database APIs like sqlite3_exec(), mysql_query(), or ODBC functions.
+
+Common Vulnerable Patterns:
+- Building SQL queries with sprintf() using user input
+- Concatenating user input directly into query strings with strcat()
+- Using string formatting to insert user parameters into queries
+- Not using parameterized queries / prepared statements
+
+Example of Vulnerable Code:
+    void process_input(char* input) {
+        char query[128];
+        sprintf(query, "SELECT * FROM users WHERE name = '%s'", input);
+        // If input is: ' OR '1'='1' --
+        // Query becomes: SELECT * FROM users WHERE name = '' OR '1'='1' --'
+        // This returns ALL users, bypassing authentication
+        sqlite3_exec(db, query, callback, 0, &err);
+    }
+
+Fix:
+    // Use parameterized queries (prepared statements)
+    sqlite3_stmt* stmt;
+    sqlite3_prepare_v2(db, "SELECT * FROM users WHERE name = ?", -1, &stmt, NULL);
+    sqlite3_bind_text(stmt, 1, input, -1, SQLITE_STATIC);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+
+    // Or validate/escape input (less preferred)
+    // Whitelist allowed characters
+    // Reject input containing ', ", --, ;, etc.
+
+Severity: CRITICAL
+Impact: Data breach, data loss, authentication bypass, full system compromise
+CWE URL: https://cwe.mitre.org/data/definitions/89.html
+
+Related CWEs: CWE-20 (Improper Input Validation), CWE-77 (Command Injection), CWE-564 (SQL Injection: Hibernate)

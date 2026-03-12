@@ -1,0 +1,38 @@
+CWE-416: Use After Free
+
+Description:
+Referencing memory after it has been freed can cause a program to crash, use unexpected values, or execute arbitrary code. When memory is freed, its contents may remain intact and accessible through a dangling pointer, but this behavior is undefined and unreliable.
+
+Common Vulnerable Patterns:
+- Calling free() on a pointer and then reading/writing through that pointer
+- Double free: calling free() on the same pointer twice
+- Returning a pointer to freed memory for use by a caller
+- Storing a pointer to freed memory in a data structure and later accessing it
+
+Example of Vulnerable Code:
+    char* buf = (char*)malloc(256);
+    strcpy(buf, "sensitive data");
+    free(buf);
+    printf("Freed: %s\n", buf);  // Use after free: undefined behavior
+
+    // Double free example:
+    int* scores = (int*)malloc(10 * sizeof(int));
+    free(scores);
+    free(scores);  // Double free: heap corruption
+
+Fix:
+    char* buf = (char*)malloc(256);
+    strcpy(buf, "sensitive data");
+    free(buf);
+    buf = NULL;  // Set to NULL after freeing
+    // Don't access buf after free
+
+    // For double free prevention:
+    free(scores);
+    scores = NULL;  // Prevents double free since free(NULL) is safe
+
+Severity: HIGH to CRITICAL
+Impact: Arbitrary code execution, denial of service, information disclosure
+CWE URL: https://cwe.mitre.org/data/definitions/416.html
+
+Related CWEs: CWE-415 (Double Free), CWE-825 (Expired Pointer Dereference), CWE-672 (Operation on a Resource after Expiration or Release)

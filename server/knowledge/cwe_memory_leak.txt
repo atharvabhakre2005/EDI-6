@@ -1,0 +1,53 @@
+CWE-401: Missing Release of Memory after Effective Lifetime (Memory Leak)
+
+Description:
+Memory is allocated dynamically (via malloc, calloc, realloc, or new) but is never freed, causing the program to consume increasing amounts of memory over time. In long-running programs like servers or daemons, memory leaks can eventually exhaust available memory and cause the program or system to crash.
+
+Common Vulnerable Patterns:
+- Allocating memory with malloc() but never calling free()
+- Returning from a function early without freeing allocated memory
+- Overwriting a pointer to allocated memory without freeing it first
+- Exception/error paths that skip cleanup code
+- Allocating in a loop without freeing each iteration
+
+Example of Vulnerable Code:
+    int* leak = (int*)malloc(100 * sizeof(int));
+    for (int i = 0; i < 100; i++) {
+        leak[i] = i;
+    }
+    // Function returns without free(leak) -> memory leak
+
+    // Lost pointer:
+    char* buf = malloc(1024);
+    buf = malloc(2048);  // Original 1024-byte block is leaked
+
+    // Early return leak:
+    void process() {
+        char* data = malloc(512);
+        if (error_condition) return;  // data is leaked
+        free(data);
+    }
+
+Fix:
+    int* data = (int*)malloc(100 * sizeof(int));
+    if (data == NULL) return -1;
+    for (int i = 0; i < 100; i++) {
+        data[i] = i;
+    }
+    // ... use data ...
+    free(data);  // Always free when done
+
+    // Use goto for cleanup in C:
+    void process() {
+        char* data = malloc(512);
+        if (error_condition) goto cleanup;
+        // ... use data ...
+    cleanup:
+        free(data);
+    }
+
+Severity: MEDIUM
+Impact: Denial of service (memory exhaustion), degraded performance, system instability
+CWE URL: https://cwe.mitre.org/data/definitions/401.html
+
+Related CWEs: CWE-772 (Missing Release of Resource after Effective Lifetime), CWE-404 (Improper Resource Shutdown or Release)

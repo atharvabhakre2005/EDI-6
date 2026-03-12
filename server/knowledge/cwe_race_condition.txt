@@ -1,0 +1,53 @@
+CWE-362: Concurrent Execution using Shared Resource with Improper Synchronization (Race Condition)
+
+Description:
+A race condition occurs when multiple threads or processes access shared data concurrently without proper synchronization, and the outcome depends on the timing of execution. This can corrupt data, cause crashes, or create security vulnerabilities. In C/C++, this commonly occurs with global variables accessed from multiple pthreads without mutexes.
+
+Common Vulnerable Patterns:
+- Multiple threads incrementing/modifying a shared global variable without a mutex
+- TOCTOU (Time-of-Check to Time-of-Use): checking a condition then acting on it non-atomically
+- Accessing shared data structures (linked lists, arrays) from multiple threads without locks
+- Signal handlers modifying shared state
+
+Example of Vulnerable Code:
+    // Race condition: no synchronization
+    int global_counter = 0;
+    void* increment(void* arg) {
+        for (int i = 0; i < 100000; i++)
+            global_counter++;  // Not atomic, data race
+        return NULL;
+    }
+    // Two threads running increment() simultaneously
+    // Expected: 200000, Actual: unpredictable (< 200000)
+
+    // TOCTOU vulnerability
+    if (access(filename, W_OK) == 0) {   // Check
+        // Window: attacker replaces file with symlink
+        FILE* fp = fopen(filename, "w");  // Use: may write to different file
+        fprintf(fp, "%s", data);
+        fclose(fp);
+    }
+
+Fix:
+    // Use mutex for thread synchronization
+    pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+    void* increment(void* arg) {
+        for (int i = 0; i < 100000; i++) {
+            pthread_mutex_lock(&lock);
+            global_counter++;
+            pthread_mutex_unlock(&lock);
+        }
+        return NULL;
+    }
+
+    // For TOCTOU: open with proper flags, check after opening
+    int fd = open(filename, O_WRONLY | O_CREAT | O_NOFOLLOW, 0644);
+    if (fd >= 0) {
+        // Use fd directly, no separate check needed
+    }
+
+Severity: MEDIUM to HIGH
+Impact: Data corruption, denial of service, privilege escalation, security bypass
+CWE URL: https://cwe.mitre.org/data/definitions/362.html
+
+Related CWEs: CWE-367 (TOCTOU Race Condition), CWE-820 (Missing Synchronization), CWE-366 (Race Condition within a Thread)

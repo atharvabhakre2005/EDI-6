@@ -35,9 +35,17 @@ class ReasoningAgent(BaseAgent):
         self.retry_delay = llm_cfg.get("retry_delay", 2)
         self.prompts = load_prompts()
 
+    @staticmethod
+    def _add_line_numbers(code: str) -> str:
+        """Prepend line numbers to each line of code so the LLM can reference exact lines."""
+        lines = code.split("\n")
+        numbered = [f"{i + 1:4d} | {line}" for i, line in enumerate(lines)]
+        return "\n".join(numbered)
+
     def execute(self, code: str) -> list[RawBug]:
         """Analyze code and return a list of raw bug hypotheses."""
-        prompt = self.prompts["reasoning_agent"].format(code=code)
+        numbered_code = self._add_line_numbers(code)
+        prompt = self.prompts["reasoning_agent"].format(code=numbered_code)
 
         for attempt in range(1, self.retry_attempts + 1):
             try:

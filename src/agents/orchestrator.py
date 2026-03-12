@@ -89,14 +89,14 @@ class Orchestrator:
             # --- Step 2: MCP grounding for each bug (no LLM calls) ---
             docs_list = []
             for i, bug in enumerate(raw_bugs):
-                code_line_text = get_code_line(code, bug.line)
                 docs_text = ""
                 if self.mcp_enabled:
                     if progress_callback:
                         progress_callback(
                             f"Grounding bug {i + 1}/{total_bugs} with MCP...", 0.2 + (0.2 * i / total_bugs)
                         )
-                    docs, event = self.mcp.run(code_line_text)
+                    mcp_query = bug.summary
+                    docs, event = self.mcp.run(mcp_query)
                     trace.append(event)
                     if docs:
                         docs_text = self.mcp.get_docs_text(docs)

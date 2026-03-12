@@ -39,49 +39,53 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }"
-S002,"import java.sql.*;
-import java.util.*;
+S002,"#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-public class UserService {
+void process_input(char* input) {
+    char query[128];
+    sprintf(query, ""SELECT * FROM users WHERE name = '%s'"", input);
+    printf(""Executing: %s\n"", query);
+}
 
-    private Connection conn;
+int main(int argc, char* argv[]) {
+    if (argc < 2) return 1;
 
-    public UserService(String dbUrl) throws SQLException {
-        conn = DriverManager.getConnection(dbUrl);
+    // Uninitialized pointer usage
+    int* data;
+    printf(""Value: %d\n"", *data);
+
+    // Integer overflow
+    int a = 2147483647;
+    int b = a + 1;
+    printf(""Overflow: %d\n"", b);
+
+    // Format string vulnerability
+    printf(argv[1]);
+
+    // Use after free
+    char* buf = (char*)malloc(256);
+    strcpy(buf, ""sensitive data"");
+    free(buf);
+    printf(""Freed: %s\n"", buf);
+
+    // Null dereference
+    char* ptr = NULL;
+    if (argc > 5)
+        ptr = ""valid"";
+    printf(""Ptr: %s\n"", ptr);
+
+    // SQL injection via unsanitized input
+    process_input(argv[1]);
+
+    // Memory leak
+    int* leak = (int*)malloc(100 * sizeof(int));
+    for (int i = 0; i < 100; i++) {
+        leak[i] = i;
     }
+    // forgot to free(leak)
 
-    public String getUserEmail(String username) throws SQLException {
-        String query = ""SELECT email FROM users WHERE username = '"" + username + ""'"";
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(query);
-        if (rs.next()) {
-            return rs.getString(""email"");
-        }
-        return null;
-    }
-
-    public List<String> getAllUsernames() throws SQLException {
-        List<String> names = new ArrayList<>();
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(""SELECT username FROM users"");
-        while (rs.next()) {
-            names.add(rs.getString(""username""));
-        }
-        return names;
-    }
-
-    public void deleteUser(String userId) throws SQLException {
-        Statement stmt = conn.createStatement();
-        stmt.executeUpdate(""DELETE FROM users WHERE id = '"" + userId + ""'"");
-    }
-
-    public boolean authenticate(String user, String pass) throws SQLException {
-        String query = ""SELECT password FROM users WHERE username = '"" + user + ""'"";
-        Statement stmt = conn.createStatement();
-        ResultSet rs = stmt.executeQuery(query);
-        if (rs.next()) {
-            return rs.getString(""password"").equals(pass);
-        }
-        return false;
-    }
+    return 0;
 }"
+

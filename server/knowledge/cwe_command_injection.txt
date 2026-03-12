@@ -1,0 +1,42 @@
+CWE-78: Improper Neutralization of Special Elements used in an OS Command (Command Injection)
+
+Description:
+Command injection occurs when user-supplied input is passed to a system command execution function without proper sanitization. An attacker can inject additional commands by using shell metacharacters like ;, |, &&, ||, backticks, or $().
+
+In C/C++, this commonly happens when user input is passed to system(), popen(), exec() family, or similar functions.
+
+Common Vulnerable Patterns:
+- Building command strings with sprintf() using user input and passing to system()
+- Using popen() with unsanitized input
+- Concatenating user input into shell commands
+
+Example of Vulnerable Code:
+    char command[256];
+    sprintf(command, "ping -c 1 %s", user_input);
+    system(command);
+    // If user_input is: "localhost; rm -rf /"
+    // Executes: ping -c 1 localhost; rm -rf /
+
+    char cmd[512];
+    sprintf(cmd, "cat /var/log/%s", filename);
+    FILE* fp = popen(cmd, "r");
+    // If filename is: "test; cat /etc/passwd"
+    // Reads password file
+
+Fix:
+    // Validate input against whitelist
+    for (int i = 0; user_input[i]; i++) {
+        if (!isalnum(user_input[i]) && user_input[i] != '.') {
+            fprintf(stderr, "Invalid input\n");
+            return -1;
+        }
+    }
+    // Use execvp() instead of system() to avoid shell interpretation
+    char* args[] = {"ping", "-c", "1", user_input, NULL};
+    execvp("ping", args);
+
+Severity: CRITICAL
+Impact: Full system compromise, arbitrary command execution, data breach
+CWE URL: https://cwe.mitre.org/data/definitions/78.html
+
+Related CWEs: CWE-77 (Command Injection), CWE-88 (Improper Neutralization of Argument Delimiters)

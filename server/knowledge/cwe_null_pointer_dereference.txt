@@ -1,0 +1,43 @@
+CWE-476: NULL Pointer Dereference
+
+Description:
+A NULL pointer dereference occurs when the application dereferences a pointer that it expects to be valid but is NULL. This typically causes a segmentation fault or crash. In C/C++, this is a common bug when return values from functions like malloc(), fopen(), or other allocation/lookup functions are not checked before use.
+
+Common Vulnerable Patterns:
+- Not checking if malloc() returned NULL before using the pointer
+- Not checking if fopen() returned NULL before reading/writing the file
+- Conditionally assigning a pointer but unconditionally using it later
+- Assuming function parameters are never NULL without validation
+
+Example of Vulnerable Code:
+    FILE* fp = fopen("config.txt", "r");
+    fgets(line, sizeof(line), fp);  // fp could be NULL if file doesn't exist
+
+    char* ptr = NULL;
+    if (argc > 5)
+        ptr = "valid";
+    printf("Ptr: %s\n", ptr);  // ptr is NULL when argc <= 5
+
+    int* data = (int*)malloc(large_size);
+    data[0] = 42;  // data could be NULL if allocation failed
+
+Fix:
+    FILE* fp = fopen("config.txt", "r");
+    if (fp == NULL) {
+        fprintf(stderr, "Failed to open config.txt\n");
+        return 1;
+    }
+    fgets(line, sizeof(line), fp);
+    fclose(fp);
+
+    char* ptr = NULL;
+    if (argc > 5)
+        ptr = "valid";
+    if (ptr != NULL)
+        printf("Ptr: %s\n", ptr);
+
+Severity: MEDIUM to HIGH
+Impact: Denial of service (crash), potential code execution in some environments
+CWE URL: https://cwe.mitre.org/data/definitions/476.html
+
+Related CWEs: CWE-690 (Unchecked Return Value to NULL Pointer Dereference), CWE-252 (Unchecked Return Value)

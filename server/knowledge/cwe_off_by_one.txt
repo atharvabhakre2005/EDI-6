@@ -1,0 +1,43 @@
+CWE-193: Off-by-one Error
+
+Description:
+An off-by-one error occurs when a loop iterates one time too many or too few, or when an array index calculation is incorrect by one. This is one of the most common programming errors in C/C++ and frequently leads to buffer overflows, reading uninitialized memory, or skipping elements.
+
+Common Vulnerable Patterns:
+- Using <= instead of < in a loop bound (writing one past the end of an array)
+- Allocating n bytes but writing n+1 bytes (forgetting null terminator)
+- Starting a loop at 1 instead of 0 (skipping first element)
+- Fence-post errors in calculating array sizes
+
+Example of Vulnerable Code:
+    // Off-by-one: writes to scores[10] which is out of bounds
+    int* scores = (int*)malloc(10 * sizeof(int));
+    for (int i = 0; i <= 10; i++) {  // Should be i < 10
+        scores[i] = i * 10;  // scores[10] is one past the allocated memory
+    }
+
+    // Missing null terminator space
+    char* contents = (char*)malloc(size);     // Should be malloc(size + 1)
+    fread(contents, 1, size, fp);
+    // contents is not null-terminated -> string functions will overrun
+
+    // String copy off-by-one
+    char buf[10];
+    for (int i = 0; i <= strlen(src); i++)  // Copies null but may overflow
+        buf[i] = src[i];
+
+Fix:
+    int* scores = (int*)malloc(10 * sizeof(int));
+    for (int i = 0; i < 10; i++) {  // Correct: i < 10
+        scores[i] = i * 10;
+    }
+
+    char* contents = (char*)malloc(size + 1);  // +1 for null terminator
+    fread(contents, 1, size, fp);
+    contents[size] = '\0';
+
+Severity: MEDIUM to HIGH
+Impact: Buffer overflow, data corruption, crashes, potential code execution
+CWE URL: https://cwe.mitre.org/data/definitions/193.html
+
+Related CWEs: CWE-120 (Buffer Copy without Checking Size), CWE-787 (Out-of-bounds Write), CWE-131 (Incorrect Calculation of Buffer Size)
