@@ -88,4 +88,69 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }"
+S003,"#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+// TOCTOU race condition
+int safe_read_file(const char* path) {
+    if (access(path, R_OK) == 0) {
+        // Window of vulnerability between check and use
+        FILE* f = fopen(path, ""r"");
+        char buf[256];
+        fgets(buf, sizeof(buf), f);
+        fclose(f);
+        return 0;
+    }
+    return -1;
+}
+
+// Realloc alias bug
+void grow_buffer(int** buf, int old_size, int new_size) {
+    int* old = *buf;
+    *buf = (int*)realloc(*buf, new_size * sizeof(int));
+    // old pointer is now dangling if realloc moved the block
+    for (int i = old_size; i < new_size; i++) {
+        old[i] = 0;
+    }
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) return 1;
+
+    // Command injection via system()
+    char cmd[256];
+    sprintf(cmd, ""ls %s"", argv[1]);
+    system(cmd);
+
+    // Signed/unsigned comparison
+    int len = -1;
+    unsigned int size = 10;
+    if (len < size) {
+        printf(""This branch may not execute as expected\n"");
+    }
+
+    // gets() — banned dangerous function
+    char input[64];
+    gets(input);
+
+    // Memory: realloc dangling pointer
+    int* data = (int*)malloc(5 * sizeof(int));
+    for (int i = 0; i < 5; i++) data[i] = i;
+    grow_buffer(&data, 5, 100);
+
+    // File handle leak
+    FILE* log1 = fopen(""log1.txt"", ""w"");
+    FILE* log2 = fopen(""log2.txt"", ""w"");
+    fprintf(log1, ""entry 1\n"");
+    fprintf(log2, ""entry 2\n"");
+    fclose(log1);
+    // forgot fclose(log2)
+
+    safe_read_file(argv[1]);
+
+    free(data);
+    return 0;
+}"
 

@@ -8,8 +8,13 @@ llm:
   model: "gemini-2.5-flash-lite"
   temperature: 0.1
   max_tokens: 4096
-  retry_attempts: 5
+  retry_attempts: 2
   retry_delay: 15 # seconds
+
+# Cache Settings (for demo mode)
+cache:
+  enabled: true
+  directory: "cache"
 
 # MCP Server Settings
 mcp:

@@ -9,8 +9,10 @@ from src.agents.reasoning_agent import ReasoningAgent
 from src.agents.mcp_agent import MCPKnowledgeAgent
 from src.agents.severity_agent import SeverityAgent
 from src.agents.explanation_agent import ExplanationAgent
+from src.cache.manager import CacheManager
 from src.models.schemas import (
     BugReport,
+    BugCategory,
     AnalysisResult,
     AgentEvent,
     AnalysisSummary,
@@ -30,6 +32,7 @@ class Orchestrator:
     3. SeverityAgent classifies bug severity
     4. ExplanationAgent refines the final explanation
 
+    Supports demo/cache mode for zero-API-call replays.
     All agent events are traced for observability.
     """
 
@@ -46,10 +49,18 @@ class Orchestrator:
         self.severity_enabled = agent_cfg.get("severity", {}).get("enabled", True)
         self.explanation_enabled = agent_cfg.get("explanation", {}).get("enabled", True)
 
+        # Cache for demo mode
+        cache_cfg = settings.get("cache", {})
+        self.cache_enabled = cache_cfg.get("enabled", True)
+        self.cache = CacheManager() if self.cache_enabled else None
+        self.demo_mode = False  # Set externally to force cache-only mode
+
     def analyze_sample(
         self, sample_id: str, code: str, progress_callback=None
     ) -> AnalysisResult:
         """Run the full multi-agent pipeline on a single code sample.
+
+        In demo mode, returns cached results without making any API calls.
 
         Args:
             sample_id: Unique identifier for the code sample.
@@ -59,6 +70,31 @@ class Orchestrator:
         Returns:
             AnalysisResult with all detected bugs and agent trace.
         """
+        # --- Check cache first ---
+        if self.cache and (self.demo_mode or self.cache_enabled):
+            cached = self.cache.get(code)
+            if cached:
+                if progress_callback:
+                    progress_callback("Loaded from cache (demo mode)", 0.5)
+                result = self._deserialize_result(cached["result"])
+                if progress_callback:
+                    progress_callback("Cache loaded!", 1.0)
+                return result
+
+        if self.demo_mode:
+            # In demo mode with no cache hit, return empty result
+            logger.warning(f"[Orchestrator] Demo mode: no cache for {sample_id}")
+            if progress_callback:
+                progress_callback("No cached result available for this code", 1.0)
+            return AnalysisResult(
+                sample_id=sample_id,
+                code=code,
+                bugs=[],
+                agent_trace=[],
+                processing_time_ms=0.0,
+            )
+
+        # --- Run full pipeline ---
         timer = Timer()
         trace: list[AgentEvent] = []
         reports: list[BugReport] = []
@@ -73,13 +109,17 @@ class Orchestrator:
 
             if not raw_bugs:
                 logger.info(f"[Orchestrator] No bugs found in sample {sample_id}")
-                return AnalysisResult(
+                result = AnalysisResult(
                     sample_id=sample_id,
                     code=code,
                     bugs=[],
                     agent_trace=trace,
                     processing_time_ms=timer.elapsed_ms,
                 )
+                # Cache even empty results
+                if self.cache:
+                    self.cache.put(code, sample_id, result.model_dump(mode="json"))
+                return result
 
             total_bugs = len(raw_bugs)
             logger.info(
@@ -169,7 +209,7 @@ class Orchestrator:
         if progress_callback:
             progress_callback("Analysis complete!", 1.0)
 
-        return AnalysisResult(
+        result = AnalysisResult(
             sample_id=sample_id,
             code=code,
             bugs=reports,
@@ -177,6 +217,12 @@ class Orchestrator:
             agent_trace=trace,
             processing_time_ms=timer.elapsed_ms,
         )
+
+        # --- Store in cache ---
+        if self.cache:
+            self.cache.put(code, sample_id, result.model_dump(mode="json"))
+
+        return result
 
     def analyze_batch(
         self,
@@ -237,4 +283,39 @@ class Orchestrator:
             bugs_by_category=bugs_by_category,
             avg_bugs_per_sample=total_bugs / max(len(results), 1),
             processing_time_ms=total_ms,
+        )
+
+    def _deserialize_result(self, data: dict) -> AnalysisResult:
+        """Reconstruct an AnalysisResult from cached JSON data."""
+        bugs = []
+        for b in data.get("bugs", []):
+            bugs.append(BugReport(
+                id=b["id"],
+                bug_line=b["bug_line"],
+                category=BugCategory(b.get("category", "UNKNOWN")),
+                severity=Severity(b.get("severity", "MEDIUM")),
+                confidence=b.get("confidence", 0.5),
+                explanation=b.get("explanation", ""),
+                raw_summary=b.get("raw_summary", ""),
+                docs_context=b.get("docs_context", ""),
+                code_line=b.get("code_line", ""),
+            ))
+
+        trace = []
+        for t in data.get("agent_trace", []):
+            trace.append(AgentEvent(
+                agent_name=t.get("agent_name", ""),
+                action=t.get("action", ""),
+                duration_ms=t.get("duration_ms", 0.0),
+                input_summary=t.get("input_summary", ""),
+                output_summary=t.get("output_summary", ""),
+                status=t.get("status", "success"),
+            ))
+
+        return AnalysisResult(
+            sample_id=data.get("sample_id", ""),
+            code=data.get("code", ""),
+            bugs=bugs,
+            agent_trace=trace,
+            processing_time_ms=data.get("processing_time_ms", 0.0),
         )

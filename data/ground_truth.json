@@ -1,0 +1,160 @@
+{
+  "_meta": {
+    "description": "Ground truth bug annotations for benchmark evaluation",
+    "line_format": "1-indexed line numbers relative to the code block (not the CSV file)",
+    "created": "2026-05-16"
+  },
+  "S001": {
+    "description": "Multi-bug C program with memory, buffer, and logic issues",
+    "bugs": [
+      {
+        "line": 8,
+        "category": "RESOURCE_MGMT",
+        "severity": "CRITICAL",
+        "description": "Returning pointer to local stack buffer — dangling pointer / undefined behavior"
+      },
+      {
+        "line": 18,
+        "category": "LOGIC_ERROR",
+        "severity": "HIGH",
+        "description": "Off-by-one error: loop condition i <= 10 writes to scores[10], overflowing a 10-element array"
+      },
+      {
+        "line": 29,
+        "category": "BUFFER_OVERFLOW",
+        "severity": "CRITICAL",
+        "description": "strcpy of unchecked argv[1] into 16-byte dest buffer — buffer overflow"
+      },
+      {
+        "line": 31,
+        "category": "ERROR_HANDLING",
+        "severity": "HIGH",
+        "description": "fopen return value not checked for NULL — file may not exist"
+      },
+      {
+        "line": 33,
+        "category": "ERROR_HANDLING",
+        "severity": "CRITICAL",
+        "description": "fgets called with potentially NULL file pointer from unchecked fopen"
+      },
+      {
+        "line": 37,
+        "category": "RESOURCE_MGMT",
+        "severity": "CRITICAL",
+        "description": "Double free of scores pointer — heap corruption / undefined behavior"
+      }
+    ]
+  },
+  "S002": {
+    "description": "Multi-vulnerability C program with security and memory issues",
+    "bugs": [
+      {
+        "line": 16,
+        "category": "RESOURCE_MGMT",
+        "severity": "CRITICAL",
+        "description": "Dereference of uninitialized pointer — undefined behavior / crash"
+      },
+      {
+        "line": 20,
+        "category": "LOGIC_ERROR",
+        "severity": "HIGH",
+        "description": "Signed integer overflow — undefined behavior in C/C++"
+      },
+      {
+        "line": 24,
+        "category": "SECURITY",
+        "severity": "CRITICAL",
+        "description": "Format string vulnerability — printf with user-controlled format string"
+      },
+      {
+        "line": 30,
+        "category": "RESOURCE_MGMT",
+        "severity": "CRITICAL",
+        "description": "Use-after-free — accessing memory after free(buf)"
+      },
+      {
+        "line": 36,
+        "category": "LOGIC_ERROR",
+        "severity": "HIGH",
+        "description": "Potential null pointer dereference — ptr may be NULL if argc <= 5"
+      },
+      {
+        "line": 39,
+        "category": "SECURITY",
+        "severity": "CRITICAL",
+        "description": "SQL injection — unsanitized argv[1] passed to process_input which builds raw SQL"
+      },
+      {
+        "line": 42,
+        "category": "RESOURCE_MGMT",
+        "severity": "HIGH",
+        "description": "Memory leak — malloc'd memory never freed before return"
+      }
+    ]
+  },
+  "S003": {
+    "description": "Concurrency, command injection, and resource management bugs",
+    "bugs": [
+      {
+        "line": 8,
+        "category": "CONCURRENCY",
+        "severity": "HIGH",
+        "description": "TOCTOU race condition — access() check then fopen() allows race window"
+      },
+      {
+        "line": 10,
+        "category": "ERROR_HANDLING",
+        "severity": "HIGH",
+        "description": "fopen return value not checked for NULL inside safe_read_file"
+      },
+      {
+        "line": 12,
+        "category": "ERROR_HANDLING",
+        "severity": "MEDIUM",
+        "description": "fgets called with potentially NULL file pointer from unchecked fopen"
+      },
+      {
+        "line": 25,
+        "category": "RESOURCE_MGMT",
+        "severity": "CRITICAL",
+        "description": "Dangling pointer — old pointer used after realloc may have moved the block"
+      },
+      {
+        "line": 35,
+        "category": "SECURITY",
+        "severity": "CRITICAL",
+        "description": "Command injection — unsanitized user input passed to system() via sprintf"
+      },
+      {
+        "line": 40,
+        "category": "TYPE_ERROR",
+        "severity": "MEDIUM",
+        "description": "Signed/unsigned comparison — int -1 compared with unsigned int, implicit conversion"
+      },
+      {
+        "line": 46,
+        "category": "BUFFER_OVERFLOW",
+        "severity": "CRITICAL",
+        "description": "gets() is banned — reads unbounded input into fixed 64-byte buffer"
+      },
+      {
+        "line": 50,
+        "category": "RESOURCE_MGMT",
+        "severity": "CRITICAL",
+        "description": "Realloc dangling pointer — use-after-realloc via grow_buffer"
+      },
+      {
+        "line": 58,
+        "category": "ERROR_HANDLING",
+        "severity": "HIGH",
+        "description": "Calling TOCTOU-vulnerable safe_read_file with user-controlled path"
+      },
+      {
+        "line": 61,
+        "category": "RESOURCE_MGMT",
+        "severity": "HIGH",
+        "description": "File handle leak — log2 opened but never closed before return"
+      }
+    ]
+  }
+}

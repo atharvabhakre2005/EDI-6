@@ -1,0 +1,174 @@
+{
+  "sample_id": "S001",
+  "code_hash": "3e71df75db495e4464ed45cb5e907ac961fa38e3fdda7d98d7497a6b889d17ce",
+  "cached_at": "2026-05-16T22:34:07.628471",
+  "result": {
+    "sample_id": "S001",
+    "code": "#include <stdio.h>\r\n#include <stdlib.h>\r\n#include <string.h>\r\n\r\nchar* get_user_greeting(const char* name) {\r\n    char buffer[64];\r\n    sprintf(buffer, \"Hello, %s! Welcome back.\", name);\r\n    return buffer;\r\n}\r\n\r\nint main(int argc, char* argv[]) {\r\n    if (argc < 2) return 1;\r\n\r\n    char* msg = get_user_greeting(argv[1]);\r\n    printf(\"%s\\n\", msg);\r\n\r\n    int* scores = (int*)malloc(10 * sizeof(int));\r\n    for (int i = 0; i <= 10; i++) {\r\n        scores[i] = i * 10;\r\n    }\r\n\r\n    int total = 0;\r\n    for (int i = 0; i < 10; i++) {\r\n        total += scores[i];\r\n    }\r\n    printf(\"Total: %d\\n\", total);\r\n\r\n    char dest[16];\r\n    strcpy(dest, argv[1]);\r\n\r\n    FILE* fp = fopen(\"config.txt\", \"r\");\r\n    char line[256];\r\n    fgets(line, sizeof(line), fp);\r\n    printf(\"Config: %s\\n\", line);\r\n\r\n    free(scores);\r\n    free(scores);\r\n\r\n    return 0;\r\n}",
+    "bugs": [
+      {
+        "id": "S001",
+        "bug_line": 8,
+        "category": "RESOURCE_MGMT",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: Returning a pointer to a local stack variable 'buffer' is incorrect as it will be deallocated upon function return. The function should return a dynamically allocated buffer or a copy of the buffer's contents.",
+        "raw_summary": "BUG: Returning a pointer to a local stack variable 'buffer' which will be deallocated when the function returns.",
+        "docs_context": "CWE-825: Expired Pointer Dereference (Dangling Pointer)\r\n\r\nDescription:\r\nA dangling pointer is a pointer that references memory that has been freed or is no longer valid. Dereferencing a dangling pointer leads to undefined behavior including crashes, data corruption, or code execution. This commonly occurs with returning stack-local variables, realloc that moves memory, and pointer aliasing after free.\r\n\r\nCommon Vulnerable Patterns:\r\n- Returning a pointer to a local (stack) variable from a funct",
+        "code_line": "return buffer;",
+        "cwe_id": "CWE-404",
+        "cwe_name": "Improper Resource Shutdown or Release"
+      },
+      {
+        "id": "S001",
+        "bug_line": 18,
+        "category": "LOGIC_ERROR",
+        "severity": "HIGH",
+        "confidence": 1.0,
+        "explanation": "BUG: The loop condition `i <= 10` for an array of size 10 (indices 0-9) results in an off-by-one error, leading to out-of-bounds access at `scores[10]`. The loop condition should be `i < 10` to stay within array bounds.",
+        "raw_summary": "BUG: Off-by-one error in loop condition. Accessing 'scores[10]' which is out of bounds for an array of size 10 (indices 0-9).",
+        "docs_context": "CWE-193: Off-by-one Error\r\n\r\nDescription:\r\nAn off-by-one error occurs when a loop iterates one time too many or too few, or when an array index calculation is incorrect by one. This is one of the most common programming errors in C/C++ and frequently leads to buffer overflows, reading uninitialized memory, or skipping elements.\r\n\r\nCommon Vulnerable Patterns:\r\n- Using <= instead of < in a loop bound (writing one past the end of an array)\r\n- Allocating n bytes but writing n+1 bytes (forgetting nul",
+        "code_line": "for (int i = 0; i <= 10; i++) {",
+        "cwe_id": "CWE-682",
+        "cwe_name": "Incorrect Calculation"
+      },
+      {
+        "id": "S001",
+        "bug_line": 29,
+        "category": "BUFFER_OVERFLOW",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: `strcpy` does not perform bounds checking, creating a buffer overflow risk if `argv[1]` exceeds the size of the `dest` buffer. Use `strncpy` or `snprintf` with explicit size limits to prevent this vulnerability.",
+        "raw_summary": "BUG: Buffer overflow. 'strcpy' does not check bounds, potentially writing beyond the 'dest' buffer if 'argv[1]' is longer than 15 characters.",
+        "docs_context": "CWE-120: Buffer Copy without Checking Size of Input (Classic Buffer Overflow)\r\n\r\nDescription:\r\nThe program copies an input buffer to an output buffer without verifying that the size of the input buffer is less than the size of the output buffer, leading to a buffer overflow.\r\n\r\nThis is a very common vulnerability in C and C++ programs. Functions like strcpy(), strcat(), sprintf(), gets() do not check buffer boundaries.\r\n\r\nCommon Vulnerable Patterns:\r\n- Using strcpy() to copy user input into a fi",
+        "code_line": "strcpy(dest, argv[1]);",
+        "cwe_id": "CWE-120",
+        "cwe_name": "Buffer Copy without Checking Size"
+      },
+      {
+        "id": "S001",
+        "bug_line": 31,
+        "category": "ERROR_HANDLING",
+        "severity": "HIGH",
+        "confidence": 1.0,
+        "explanation": "BUG: The program fails to check the return value of `fopen`. If `config.txt` cannot be opened, `fp` will be NULL, leading to a potential NULL dereference in subsequent operations. Error handling should be implemented to check if `fp` is NULL after `fopen`.",
+        "raw_summary": "BUG: Missing error handling for 'fopen'. If 'config.txt' cannot be opened, 'fp' will be NULL, leading to a NULL dereference in 'fgets'.",
+        "docs_context": "CWE-476: NULL Pointer Dereference\r\n\r\nDescription:\r\nA NULL pointer dereference occurs when the application dereferences a pointer that it expects to be valid but is NULL. This typically causes a segmentation fault or crash. In C/C++, this is a common bug when return values from functions like malloc(), fopen(), or other allocation/lookup functions are not checked before use.\r\n\r\nCommon Vulnerable Patterns:\r\n- Not checking if malloc() returned NULL before using the pointer\r\n- Not checking if fopen(",
+        "code_line": "FILE* fp = fopen(\"config.txt\", \"r\");",
+        "cwe_id": "CWE-754",
+        "cwe_name": "Improper Check for Unusual Conditions"
+      },
+      {
+        "id": "S001",
+        "bug_line": 33,
+        "category": "ERROR_HANDLING",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: `fgets` is called with a NULL pointer `fp`, which is a NULL dereference. This occurs because the preceding `fopen` call likely failed, and its return value was not checked. Ensure `fp` is valid before calling `fgets`.",
+        "raw_summary": "BUG: NULL dereference. If 'fopen' on line 31 failed, 'fp' is NULL, and 'fgets' will dereference a NULL pointer.",
+        "docs_context": "CWE-476: NULL Pointer Dereference\r\n\r\nDescription:\r\nA NULL pointer dereference occurs when the application dereferences a pointer that it expects to be valid but is NULL. This typically causes a segmentation fault or crash. In C/C++, this is a common bug when return values from functions like malloc(), fopen(), or other allocation/lookup functions are not checked before use.\r\n\r\nCommon Vulnerable Patterns:\r\n- Not checking if malloc() returned NULL before using the pointer\r\n- Not checking if fopen(",
+        "code_line": "fgets(line, sizeof(line), fp);",
+        "cwe_id": "CWE-754",
+        "cwe_name": "Improper Check for Unusual Conditions"
+      },
+      {
+        "id": "S001",
+        "bug_line": 37,
+        "category": "RESOURCE_MGMT",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: The `scores` pointer is being freed twice, which is a double-free error. Each dynamically allocated memory block should only be freed once to avoid undefined behavior and potential crashes.",
+        "raw_summary": "BUG: Double free. 'scores' pointer is freed twice.",
+        "docs_context": "CWE-416: Use After Free\r\n\r\nDescription:\r\nReferencing memory after it has been freed can cause a program to crash, use unexpected values, or execute arbitrary code. When memory is freed, its contents may remain intact and accessible through a dangling pointer, but this behavior is undefined and unreliable.\r\n\r\nCommon Vulnerable Patterns:\r\n- Calling free() on a pointer and then reading/writing through that pointer\r\n- Double free: calling free() on the same pointer twice\r\n- Returning a pointer to fr",
+        "code_line": "free(scores);",
+        "cwe_id": "CWE-404",
+        "cwe_name": "Improper Resource Shutdown or Release"
+      }
+    ],
+    "timestamp": "2026-05-16T22:34:07.628471",
+    "agent_trace": [
+      {
+        "agent_name": "ReasoningAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:33:41.018738",
+        "duration_ms": 2067.740100028459,
+        "input_summary": "#include <stdio.h>\r\n#include <stdlib.h>\r\n#include <string.h>\r\n\r\nchar* get_user_g...",
+        "output_summary": "6 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:33:41.745631",
+        "duration_ms": 725.6542000104673,
+        "input_summary": "BUG: Returning a pointer to a local stack variable 'buffer' which will be deallo...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:33:42.114287",
+        "duration_ms": 368.2329999865033,
+        "input_summary": "BUG: Off-by-one error in loop condition. Accessing 'scores[10]' which is out of ...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:33:42.464169",
+        "duration_ms": 349.80989998439327,
+        "input_summary": "BUG: Buffer overflow. 'strcpy' does not check bounds, potentially writing beyond...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:33:42.823705",
+        "duration_ms": 359.470599971246,
+        "input_summary": "BUG: Missing error handling for 'fopen'. If 'config.txt' cannot be opened, 'fp' ...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:33:43.177576",
+        "duration_ms": 353.5006000311114,
+        "input_summary": "BUG: NULL dereference. If 'fopen' on line 31 failed, 'fp' is NULL, and 'fgets' w...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:33:43.507230",
+        "duration_ms": 328.99360003648326,
+        "input_summary": "BUG: Double free. 'scores' pointer is freed twice.",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "SeverityAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:33:52.300588",
+        "duration_ms": 8792.641200008802,
+        "input_summary": "list",
+        "output_summary": "6 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "ExplanationAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:34:07.628471",
+        "duration_ms": 15326.735499955248,
+        "input_summary": "list",
+        "output_summary": "6 items",
+        "status": "success"
+      }
+    ],
+    "processing_time_ms": 28677.784400002565
+  }
+}

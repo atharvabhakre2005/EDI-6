@@ -1,0 +1,196 @@
+{
+  "sample_id": "S002",
+  "code_hash": "f2917d7a84f9a996ea063853c64f82557c29dc3d7c164cc29a07dc8f03f046f7",
+  "cached_at": "2026-05-16T22:34:49.292267",
+  "result": {
+    "sample_id": "S002",
+    "code": "#include <stdio.h>\r\n#include <stdlib.h>\r\n#include <string.h>\r\n\r\nvoid process_input(char* input) {\r\n    char query[128];\r\n    sprintf(query, \"SELECT * FROM users WHERE name = '%s'\", input);\r\n    printf(\"Executing: %s\\n\", query);\r\n}\r\n\r\nint main(int argc, char* argv[]) {\r\n    if (argc < 2) return 1;\r\n\r\n    // Uninitialized pointer usage\r\n    int* data;\r\n    printf(\"Value: %d\\n\", *data);\r\n\r\n    // Integer overflow\r\n    int a = 2147483647;\r\n    int b = a + 1;\r\n    printf(\"Overflow: %d\\n\", b);\r\n\r\n    // Format string vulnerability\r\n    printf(argv[1]);\r\n\r\n    // Use after free\r\n    char* buf = (char*)malloc(256);\r\n    strcpy(buf, \"sensitive data\");\r\n    free(buf);\r\n    printf(\"Freed: %s\\n\", buf);\r\n\r\n    // Null dereference\r\n    char* ptr = NULL;\r\n    if (argc > 5)\r\n        ptr = \"valid\";\r\n    printf(\"Ptr: %s\\n\", ptr);\r\n\r\n    // SQL injection via unsanitized input\r\n    process_input(argv[1]);\r\n\r\n    // Memory leak\r\n    int* leak = (int*)malloc(100 * sizeof(int));\r\n    for (int i = 0; i < 100; i++) {\r\n        leak[i] = i;\r\n    }\r\n    // forgot to free(leak)\r\n\r\n    return 0;\r\n}",
+    "bugs": [
+      {
+        "id": "S002",
+        "bug_line": 16,
+        "category": "LOGIC_ERROR",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: Dereferencing an uninitialized pointer 'data' can lead to undefined behavior. Ensure 'data' is properly initialized before dereferencing it to avoid potential crashes.",
+        "raw_summary": "BUG: Dereferencing an uninitialized pointer 'data'.",
+        "docs_context": "CWE-476: NULL Pointer Dereference\r\n\r\nDescription:\r\nA NULL pointer dereference occurs when the application dereferences a pointer that it expects to be valid but is NULL. This typically causes a segmentation fault or crash. In C/C++, this is a common bug when return values from functions like malloc(), fopen(), or other allocation/lookup functions are not checked before use.\r\n\r\nCommon Vulnerable Patterns:\r\n- Not checking if malloc() returned NULL before using the pointer\r\n- Not checking if fopen(",
+        "code_line": "printf(\"Value: %d\\n\", *data);",
+        "cwe_id": "CWE-682",
+        "cwe_name": "Incorrect Calculation"
+      },
+      {
+        "id": "S002",
+        "bug_line": 21,
+        "category": "LOGIC_ERROR",
+        "severity": "HIGH",
+        "confidence": 1.0,
+        "explanation": "BUG: Integer overflow occurs when adding 1 to INT_MAX, resulting in undefined behavior for signed integers. Use larger integer types or check for overflow conditions before performing the addition.",
+        "raw_summary": "BUG: Integer overflow when adding 1 to INT_MAX.",
+        "docs_context": "CWE-190: Integer Overflow or Wraparound\r\n\r\nDescription:\r\nAn integer overflow occurs when an arithmetic operation attempts to create a numeric value that is outside the range that can be represented by the data type. In C/C++, signed integer overflow is undefined behavior, while unsigned integers wrap around. This can lead to incorrect calculations, buffer overflows, and security vulnerabilities.\r\n\r\nCommon Vulnerable Patterns:\r\n- Adding to INT_MAX (2147483647 for 32-bit signed int) causing wrapar",
+        "code_line": "printf(\"Overflow: %d\\n\", b);",
+        "cwe_id": "CWE-682",
+        "cwe_name": "Incorrect Calculation"
+      },
+      {
+        "id": "S002",
+        "bug_line": 24,
+        "category": "SECURITY",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: Format string vulnerability exists by directly using 'argv[1]' as the format string in printf. User-supplied input should never be used directly as a format string; use a fixed format string and pass user input as arguments.",
+        "raw_summary": "BUG: Format string vulnerability: 'argv[1]' is used directly as the format string.",
+        "docs_context": "CWE-134: Use of Externally-Controlled Format String\r\n\r\nDescription:\r\nThe software uses a function that accepts a format string as an argument, but the format string originates from an external source. An attacker can supply format specifiers (%s, %x, %n) to read from or write to memory, crash the program, or execute arbitrary code.\r\n\r\nIn C/C++, functions that use format strings include: printf(), fprintf(), sprintf(), snprintf(), syslog(), and scanf() family.\r\n\r\nCommon Vulnerable Patterns:\r\n- Pa",
+        "code_line": "printf(argv[1]);",
+        "cwe_id": "CWE-89",
+        "cwe_name": "SQL Injection"
+      },
+      {
+        "id": "S002",
+        "bug_line": 30,
+        "category": "RESOURCE_MGMT",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: Use after free vulnerability: 'buf' is dereferenced after being freed. Memory must not be accessed after it has been deallocated to prevent crashes or data corruption.",
+        "raw_summary": "BUG: Use after free: 'buf' is dereferenced after being freed.",
+        "docs_context": "CWE-416: Use After Free\r\n\r\nDescription:\r\nReferencing memory after it has been freed can cause a program to crash, use unexpected values, or execute arbitrary code. When memory is freed, its contents may remain intact and accessible through a dangling pointer, but this behavior is undefined and unreliable.\r\n\r\nCommon Vulnerable Patterns:\r\n- Calling free() on a pointer and then reading/writing through that pointer\r\n- Double free: calling free() on the same pointer twice\r\n- Returning a pointer to fr",
+        "code_line": "printf(\"Freed: %s\\n\", buf);",
+        "cwe_id": "CWE-404",
+        "cwe_name": "Improper Resource Shutdown or Release"
+      },
+      {
+        "id": "S002",
+        "bug_line": 36,
+        "category": "ERROR_HANDLING",
+        "severity": "HIGH",
+        "confidence": 0.9,
+        "explanation": "BUG: Potential null dereference: 'ptr' might be NULL if argc <= 5 and is then dereferenced. Always check if a pointer is NULL before dereferencing it to prevent segmentation faults.",
+        "raw_summary": "BUG: Potential null dereference: 'ptr' might be NULL if argc <= 5 and is then dereferenced.",
+        "docs_context": "CWE-476: NULL Pointer Dereference\r\n\r\nDescription:\r\nA NULL pointer dereference occurs when the application dereferences a pointer that it expects to be valid but is NULL. This typically causes a segmentation fault or crash. In C/C++, this is a common bug when return values from functions like malloc(), fopen(), or other allocation/lookup functions are not checked before use.\r\n\r\nCommon Vulnerable Patterns:\r\n- Not checking if malloc() returned NULL before using the pointer\r\n- Not checking if fopen(",
+        "code_line": "printf(\"Ptr: %s\\n\", ptr);",
+        "cwe_id": "CWE-754",
+        "cwe_name": "Improper Check for Unusual Conditions"
+      },
+      {
+        "id": "S002",
+        "bug_line": 39,
+        "category": "SECURITY",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: SQL injection vulnerability: 'argv[1]' is directly used in sprintf without sanitization. User input must be properly sanitized or parameterized before being incorporated into SQL queries to prevent malicious code execution.",
+        "raw_summary": "BUG: SQL injection vulnerability: 'argv[1]' is directly used in sprintf without sanitization.",
+        "docs_context": "CWE-89: SQL Injection (Improper Neutralization of Special Elements used in an SQL Command)\r\n\r\nDescription:\r\nSQL injection occurs when user-supplied data is inserted into an SQL query without proper sanitization or parameterization. An attacker can manipulate the query to access, modify, or delete unauthorized data, bypass authentication, or execute administrative operations on the database.\r\n\r\nIn C/C++ programs, this typically happens when user input is concatenated into SQL query strings using ",
+        "code_line": "process_input(argv[1]);",
+        "cwe_id": "CWE-89",
+        "cwe_name": "SQL Injection"
+      },
+      {
+        "id": "S002",
+        "bug_line": 42,
+        "category": "RESOURCE_MGMT",
+        "severity": "HIGH",
+        "confidence": 1.0,
+        "explanation": "BUG: Memory leak: allocated memory for 'leak' is not freed. Dynamically allocated memory must be explicitly deallocated using free() to prevent memory exhaustion.",
+        "raw_summary": "BUG: Memory leak: allocated memory for 'leak' is not freed.",
+        "docs_context": "CWE-401: Missing Release of Memory after Effective Lifetime (Memory Leak)\r\n\r\nDescription:\r\nMemory is allocated dynamically (via malloc, calloc, realloc, or new) but is never freed, causing the program to consume increasing amounts of memory over time. In long-running programs like servers or daemons, memory leaks can eventually exhaust available memory and cause the program or system to crash.\r\n\r\nCommon Vulnerable Patterns:\r\n- Allocating memory with malloc() but never calling free()\r\n- Returning",
+        "code_line": "int* leak = (int*)malloc(100 * sizeof(int));",
+        "cwe_id": "CWE-404",
+        "cwe_name": "Improper Resource Shutdown or Release"
+      }
+    ],
+    "timestamp": "2026-05-16T22:34:49.291093",
+    "agent_trace": [
+      {
+        "agent_name": "ReasoningAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:34:25.890389",
+        "duration_ms": 2748.2512000133283,
+        "input_summary": "#include <stdio.h>\r\n#include <stdlib.h>\r\n#include <string.h>\r\n\r\nvoid process_inp...",
+        "output_summary": "7 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:34:26.211434",
+        "duration_ms": 318.747200013604,
+        "input_summary": "BUG: Dereferencing an uninitialized pointer 'data'.",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:34:26.551852",
+        "duration_ms": 339.98250000877306,
+        "input_summary": "BUG: Integer overflow when adding 1 to INT_MAX.",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:34:26.954057",
+        "duration_ms": 401.8768999958411,
+        "input_summary": "BUG: Format string vulnerability: 'argv[1]' is used directly as the format strin...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:34:27.330650",
+        "duration_ms": 376.1817999766208,
+        "input_summary": "BUG: Use after free: 'buf' is dereferenced after being freed.",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:34:27.701935",
+        "duration_ms": 372.4268000223674,
+        "input_summary": "BUG: Potential null dereference: 'ptr' might be NULL if argc <= 5 and is then de...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:34:28.067732",
+        "duration_ms": 364.9913999834098,
+        "input_summary": "BUG: SQL injection vulnerability: 'argv[1]' is directly used in sprintf without ...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:34:28.460215",
+        "duration_ms": 391.0818000440486,
+        "input_summary": "BUG: Memory leak: allocated memory for 'leak' is not freed.",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "SeverityAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:34:37.766664",
+        "duration_ms": 9305.45909999637,
+        "input_summary": "list",
+        "output_summary": "7 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "ExplanationAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:34:49.291093",
+        "duration_ms": 11524.490100040566,
+        "input_summary": "list",
+        "output_summary": "7 items",
+        "status": "success"
+      }
+    ],
+    "processing_time_ms": 26148.452800000086
+  }
+}

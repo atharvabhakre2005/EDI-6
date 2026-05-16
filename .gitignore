@@ -19,5 +19,4 @@ venv/
 *~
 .DS_Store
 Thumbs.db
-server/embedding_model/
-.env.example
+server/embedding_model/

@@ -1,0 +1,262 @@
+{
+  "sample_id": "S003",
+  "code_hash": "7074ae87db35fba54999f55ac806054e672ee99eafa897c6dc2d1c83c487c848",
+  "cached_at": "2026-05-16T22:42:48.743247",
+  "result": {
+    "sample_id": "S003",
+    "code": "#include <stdio.h>\r\n#include <stdlib.h>\r\n#include <string.h>\r\n#include <unistd.h>\r\n\r\n// TOCTOU race condition\r\nint safe_read_file(const char* path) {\r\n    if (access(path, R_OK) == 0) {\r\n        // Window of vulnerability between check and use\r\n        FILE* f = fopen(path, \"r\");\r\n        char buf[256];\r\n        fgets(buf, sizeof(buf), f);\r\n        fclose(f);\r\n        return 0;\r\n    }\r\n    return -1;\r\n}\r\n\r\n// Realloc alias bug\r\nvoid grow_buffer(int** buf, int old_size, int new_size) {\r\n    int* old = *buf;\r\n    *buf = (int*)realloc(*buf, new_size * sizeof(int));\r\n    // old pointer is now dangling if realloc moved the block\r\n    for (int i = old_size; i < new_size; i++) {\r\n        old[i] = 0;\r\n    }\r\n}\r\n\r\nint main(int argc, char* argv[]) {\r\n    if (argc < 2) return 1;\r\n\r\n    // Command injection via system()\r\n    char cmd[256];\r\n    sprintf(cmd, \"ls %s\", argv[1]);\r\n    system(cmd);\r\n\r\n    // Signed/unsigned comparison\r\n    int len = -1;\r\n    unsigned int size = 10;\r\n    if (len < size) {\r\n        printf(\"This branch may not execute as expected\\n\");\r\n    }\r\n\r\n    // gets() \u2014 banned dangerous function\r\n    char input[64];\r\n    gets(input);\r\n\r\n    // Memory: realloc dangling pointer\r\n    int* data = (int*)malloc(5 * sizeof(int));\r\n    for (int i = 0; i < 5; i++) data[i] = i;\r\n    grow_buffer(&data, 5, 100);\r\n\r\n    // File handle leak\r\n    FILE* log1 = fopen(\"log1.txt\", \"w\");\r\n    FILE* log2 = fopen(\"log2.txt\", \"w\");\r\n    fprintf(log1, \"entry 1\\n\");\r\n    fprintf(log2, \"entry 2\\n\");\r\n    fclose(log1);\r\n    // forgot fclose(log2)\r\n\r\n    safe_read_file(argv[1]);\r\n\r\n    free(data);\r\n    return 0;\r\n}",
+    "bugs": [
+      {
+        "id": "S003",
+        "bug_line": 8,
+        "category": "SECURITY",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: TOCTOU race condition: The `access()` check for file readability is not atomic with the subsequent `fopen()` call, allowing the file to be modified or deleted between checks. Ensure atomic file operations or appropriate locking mechanisms to prevent this vulnerability.",
+        "raw_summary": "BUG: TOCTOU race condition: file can be modified or deleted between access() check and fopen() call.",
+        "docs_context": "CWE-362: Concurrent Execution using Shared Resource with Improper Synchronization (Race Condition)\r\n\r\nDescription:\r\nA race condition occurs when multiple threads or processes access shared data concurrently without proper synchronization, and the outcome depends on the timing of execution. This can corrupt data, cause crashes, or create security vulnerabilities. In C/C++, this commonly occurs with global variables accessed from multiple pthreads without mutexes.\r\n\r\nCommon Vulnerable Patterns:\r\n-",
+        "code_line": "if (access(path, R_OK) == 0) {",
+        "cwe_id": "CWE-89",
+        "cwe_name": "SQL Injection"
+      },
+      {
+        "id": "S003",
+        "bug_line": 10,
+        "category": "ERROR_HANDLING",
+        "severity": "HIGH",
+        "confidence": 0.9,
+        "explanation": "BUG: Missing error handling: The return value of `fopen()` is not checked for `NULL`, which can lead to a NULL pointer dereference if the file cannot be opened. Always validate the file pointer returned by `fopen()` before use.",
+        "raw_summary": "BUG: Missing error handling: return value of fopen() is not checked for NULL.",
+        "docs_context": "CWE-476: NULL Pointer Dereference\r\n\r\nDescription:\r\nA NULL pointer dereference occurs when the application dereferences a pointer that it expects to be valid but is NULL. This typically causes a segmentation fault or crash. In C/C++, this is a common bug when return values from functions like malloc(), fopen(), or other allocation/lookup functions are not checked before use.\r\n\r\nCommon Vulnerable Patterns:\r\n- Not checking if malloc() returned NULL before using the pointer\r\n- Not checking if fopen(",
+        "code_line": "FILE* f = fopen(path, \"r\");",
+        "cwe_id": "CWE-754",
+        "cwe_name": "Improper Check for Unusual Conditions"
+      },
+      {
+        "id": "S003",
+        "bug_line": 12,
+        "category": "ERROR_HANDLING",
+        "severity": "MEDIUM",
+        "confidence": 0.9,
+        "explanation": "BUG: Missing error handling: The return value of `fgets()` is not checked, which can lead to incorrect data processing or buffer overflows if the read operation fails or encounters an error. Check the return value of `fgets()` to ensure successful data retrieval.",
+        "raw_summary": "BUG: Missing error handling: return value of fgets() is not checked.",
+        "docs_context": "CWE-193: Off-by-one Error\r\n\r\nDescription:\r\nAn off-by-one error occurs when a loop iterates one time too many or too few, or when an array index calculation is incorrect by one. This is one of the most common programming errors in C/C++ and frequently leads to buffer overflows, reading uninitialized memory, or skipping elements.\r\n\r\nCommon Vulnerable Patterns:\r\n- Using <= instead of < in a loop bound (writing one past the end of an array)\r\n- Allocating n bytes but writing n+1 bytes (forgetting nul",
+        "code_line": "fgets(buf, sizeof(buf), f);",
+        "cwe_id": "CWE-754",
+        "cwe_name": "Improper Check for Unusual Conditions"
+      },
+      {
+        "id": "S003",
+        "bug_line": 25,
+        "category": "RESOURCE_MGMT",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: Use-after-free: Accessing elements of `old` after `realloc()` may have moved the memory block, leading to a use-after-free vulnerability. Ensure that pointers are updated to the new memory location after `realloc()` or avoid accessing the old pointer.",
+        "raw_summary": "BUG: Use-after-free: accessing 'old' pointer after realloc may have moved the memory block.",
+        "docs_context": "CWE-416: Use After Free\r\n\r\nDescription:\r\nReferencing memory after it has been freed can cause a program to crash, use unexpected values, or execute arbitrary code. When memory is freed, its contents may remain intact and accessible through a dangling pointer, but this behavior is undefined and unreliable.\r\n\r\nCommon Vulnerable Patterns:\r\n- Calling free() on a pointer and then reading/writing through that pointer\r\n- Double free: calling free() on the same pointer twice\r\n- Returning a pointer to fr",
+        "code_line": "old[i] = 0;",
+        "cwe_id": "CWE-404",
+        "cwe_name": "Improper Resource Shutdown or Release"
+      },
+      {
+        "id": "S003",
+        "bug_line": 35,
+        "category": "SECURITY",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: Command injection: User-controlled input from `argv[1]` is directly passed to `system()`, creating a command injection vulnerability. Sanitize or validate all external input before passing it to system commands.",
+        "raw_summary": "BUG: Command injection: user-controlled input (argv[1]) is directly passed to system().",
+        "docs_context": "CWE-78: Improper Neutralization of Special Elements used in an OS Command (Command Injection)\r\n\r\nDescription:\r\nCommand injection occurs when user-supplied input is passed to a system command execution function without proper sanitization. An attacker can inject additional commands by using shell metacharacters like ;, |, &&, ||, backticks, or $().\r\n\r\nIn C/C++, this commonly happens when user input is passed to system(), popen(), exec() family, or similar functions.\r\n\r\nCommon Vulnerable Patterns:",
+        "code_line": "system(cmd);",
+        "cwe_id": "CWE-89",
+        "cwe_name": "SQL Injection"
+      },
+      {
+        "id": "S003",
+        "bug_line": 40,
+        "category": "TYPE_ERROR",
+        "severity": "MEDIUM",
+        "confidence": 1.0,
+        "explanation": "BUG: Type error: A signed integer `len` is compared with an unsigned integer `size`, which can lead to unexpected behavior due to potential integer conversion issues. Ensure consistent use of signed or unsigned types in comparisons or perform explicit type conversions.",
+        "raw_summary": "BUG: Type error: signed integer 'len' is compared with unsigned integer 'size', potentially leading to unexpected behavior.",
+        "docs_context": "CWE-190: Integer Overflow or Wraparound\r\n\r\nDescription:\r\nAn integer overflow occurs when an arithmetic operation attempts to create a numeric value that is outside the range that can be represented by the data type. In C/C++, signed integer overflow is undefined behavior, while unsigned integers wrap around. This can lead to incorrect calculations, buffer overflows, and security vulnerabilities.\r\n\r\nCommon Vulnerable Patterns:\r\n- Adding to INT_MAX (2147483647 for 32-bit signed int) causing wrapar",
+        "code_line": "if (len < size) {",
+        "cwe_id": "CWE-681",
+        "cwe_name": "Incorrect Conversion between Numeric Types"
+      },
+      {
+        "id": "S003",
+        "bug_line": 46,
+        "category": "BUFFER_OVERFLOW",
+        "severity": "CRITICAL",
+        "confidence": 1.0,
+        "explanation": "BUG: Buffer overflow: The `gets()` function is used, which does not perform bounds checking and is inherently dangerous, leading to buffer overflows. Replace `gets()` with safer functions like `fgets()` that allow specifying buffer size.",
+        "raw_summary": "BUG: Buffer overflow: gets() is a dangerous function that does not perform bounds checking.",
+        "docs_context": "CWE-120: Buffer Copy without Checking Size of Input (Classic Buffer Overflow)\r\n\r\nDescription:\r\nThe program copies an input buffer to an output buffer without verifying that the size of the input buffer is less than the size of the output buffer, leading to a buffer overflow.\r\n\r\nThis is a very common vulnerability in C and C++ programs. Functions like strcpy(), strcat(), sprintf(), gets() do not check buffer boundaries.\r\n\r\nCommon Vulnerable Patterns:\r\n- Using strcpy() to copy user input into a fi",
+        "code_line": "gets(input);",
+        "cwe_id": "CWE-120",
+        "cwe_name": "Buffer Copy without Checking Size"
+      },
+      {
+        "id": "S003",
+        "bug_line": 51,
+        "category": "RESOURCE_MGMT",
+        "severity": "CRITICAL",
+        "confidence": 0.9,
+        "explanation": "BUG: Dangling pointer: The `grow_buffer()` function may reallocate memory, invalidating the original `data` pointer, which is then freed later. Ensure that the `data` pointer is updated to the new address after `grow_buffer()` or manage memory allocation and deallocation carefully.",
+        "raw_summary": "BUG: Dangling pointer: grow_buffer() is called, but the original 'data' pointer is freed later, while grow_buffer itself might have reallocated and invalidated the original pointer.",
+        "docs_context": "CWE-825: Expired Pointer Dereference (Dangling Pointer)\r\n\r\nDescription:\r\nA dangling pointer is a pointer that references memory that has been freed or is no longer valid. Dereferencing a dangling pointer leads to undefined behavior including crashes, data corruption, or code execution. This commonly occurs with returning stack-local variables, realloc that moves memory, and pointer aliasing after free.\r\n\r\nCommon Vulnerable Patterns:\r\n- Returning a pointer to a local (stack) variable from a funct",
+        "code_line": "grow_buffer(&data, 5, 100);",
+        "cwe_id": "CWE-404",
+        "cwe_name": "Improper Resource Shutdown or Release"
+      },
+      {
+        "id": "S003",
+        "bug_line": 58,
+        "category": "RESOURCE_MGMT",
+        "severity": "HIGH",
+        "confidence": 1.0,
+        "explanation": "BUG: Resource leak: `fclose()` is not called for the `log2` file pointer, resulting in a resource leak. Ensure that all opened file pointers are properly closed using `fclose()` to release system resources.",
+        "raw_summary": "BUG: Resource leak: fclose() is not called for 'log2'.",
+        "docs_context": "CWE-401: Missing Release of Memory after Effective Lifetime (Memory Leak)\r\n\r\nDescription:\r\nMemory is allocated dynamically (via malloc, calloc, realloc, or new) but is never freed, causing the program to consume increasing amounts of memory over time. In long-running programs like servers or daemons, memory leaks can eventually exhaust available memory and cause the program or system to crash.\r\n\r\nCommon Vulnerable Patterns:\r\n- Allocating memory with malloc() but never calling free()\r\n- Returning",
+        "code_line": "fclose(log1);",
+        "cwe_id": "CWE-404",
+        "cwe_name": "Improper Resource Shutdown or Release"
+      },
+      {
+        "id": "S003",
+        "bug_line": 61,
+        "category": "ERROR_HANDLING",
+        "severity": "HIGH",
+        "confidence": 0.9,
+        "explanation": "BUG: Missing error handling: The return value of `safe_read_file()` is not checked, which can lead to incorrect program execution if the file read operation fails. Always validate the return status of file I/O functions to handle potential errors.",
+        "raw_summary": "BUG: Missing error handling: return value of safe_read_file() is not checked.",
+        "docs_context": "CWE-193: Off-by-one Error\r\n\r\nDescription:\r\nAn off-by-one error occurs when a loop iterates one time too many or too few, or when an array index calculation is incorrect by one. This is one of the most common programming errors in C/C++ and frequently leads to buffer overflows, reading uninitialized memory, or skipping elements.\r\n\r\nCommon Vulnerable Patterns:\r\n- Using <= instead of < in a loop bound (writing one past the end of an array)\r\n- Allocating n bytes but writing n+1 bytes (forgetting nul",
+        "code_line": "safe_read_file(argv[1]);",
+        "cwe_id": "CWE-754",
+        "cwe_name": "Improper Check for Unusual Conditions"
+      }
+    ],
+    "timestamp": "2026-05-16T22:42:48.743247",
+    "agent_trace": [
+      {
+        "agent_name": "ReasoningAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:27.699844",
+        "duration_ms": 7300.014200038277,
+        "input_summary": "#include <stdio.h>\r\n#include <stdlib.h>\r\n#include <string.h>\r\n#include <unistd.h...",
+        "output_summary": "10 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:28.063161",
+        "duration_ms": 362.1659000054933,
+        "input_summary": "BUG: TOCTOU race condition: file can be modified or deleted between access() che...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:28.438390",
+        "duration_ms": 374.5739000150934,
+        "input_summary": "BUG: Missing error handling: return value of fopen() is not checked for NULL.",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:28.789971",
+        "duration_ms": 351.86709999106824,
+        "input_summary": "BUG: Missing error handling: return value of fgets() is not checked.",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:29.150689",
+        "duration_ms": 359.6545999753289,
+        "input_summary": "BUG: Use-after-free: accessing 'old' pointer after realloc may have moved the me...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:29.506720",
+        "duration_ms": 355.6211999966763,
+        "input_summary": "BUG: Command injection: user-controlled input (argv[1]) is directly passed to sy...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:29.893132",
+        "duration_ms": 386.57799997599795,
+        "input_summary": "BUG: Type error: signed integer 'len' is compared with unsigned integer 'size', ...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:30.273250",
+        "duration_ms": 379.6006999909878,
+        "input_summary": "BUG: Buffer overflow: gets() is a dangerous function that does not perform bound...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:30.701339",
+        "duration_ms": 427.20679997000843,
+        "input_summary": "BUG: Dangling pointer: grow_buffer() is called, but the original 'data' pointer ...",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:31.071613",
+        "duration_ms": 370.8079000352882,
+        "input_summary": "BUG: Resource leak: fclose() is not called for 'log2'.",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "MCPKnowledgeAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:31.441265",
+        "duration_ms": 368.0303000146523,
+        "input_summary": "BUG: Missing error handling: return value of safe_read_file() is not checked.",
+        "output_summary": "13 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "SeverityAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:36.898012",
+        "duration_ms": 5456.756500003394,
+        "input_summary": "list",
+        "output_summary": "10 items",
+        "status": "success"
+      },
+      {
+        "agent_name": "ExplanationAgent",
+        "action": "execute",
+        "timestamp": "2026-05-16T22:42:48.743247",
+        "duration_ms": 11843.802399991546,
+        "input_summary": "list",
+        "output_summary": "10 items",
+        "status": "success"
+      }
+    ],
+    "processing_time_ms": 28343.417099968065
+  }
+}

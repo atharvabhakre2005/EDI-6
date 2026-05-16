@@ -23,6 +23,21 @@ class BugCategory(str, Enum):
     UNKNOWN = "UNKNOWN"
 
 
+# CWE (Common Weakness Enumeration) mapping for industry-standard classification
+CWE_MAPPING: dict[str, dict[str, str]] = {
+    "API_MISUSE": {"id": "CWE-252", "name": "Unchecked Return Value"},
+    "LOGIC_ERROR": {"id": "CWE-682", "name": "Incorrect Calculation"},
+    "RESOURCE_MGMT": {"id": "CWE-404", "name": "Improper Resource Shutdown or Release"},
+    "CONCURRENCY": {"id": "CWE-362", "name": "Race Condition"},
+    "CONFIG_ERROR": {"id": "CWE-16", "name": "Configuration"},
+    "ERROR_HANDLING": {"id": "CWE-754", "name": "Improper Check for Unusual Conditions"},
+    "TYPE_ERROR": {"id": "CWE-681", "name": "Incorrect Conversion between Numeric Types"},
+    "SECURITY": {"id": "CWE-89", "name": "SQL Injection"},
+    "BUFFER_OVERFLOW": {"id": "CWE-120", "name": "Buffer Copy without Checking Size"},
+    "UNKNOWN": {"id": "CWE-398", "name": "Indicator of Poor Code Quality"},
+}
+
+
 class Severity(str, Enum):
     """Bug severity levels."""
     CRITICAL = "CRITICAL"
@@ -56,6 +71,16 @@ class BugReport(BaseModel):
     raw_summary: str = Field(default="", description="Original LLM summary")
     docs_context: str = Field(default="", description="MCP documentation used")
     code_line: str = Field(default="", description="The actual code at bug line")
+    cwe_id: str = Field(default="", description="CWE identifier")
+    cwe_name: str = Field(default="", description="CWE vulnerability name")
+
+    def model_post_init(self, __context) -> None:
+        """Auto-populate CWE fields from category if not set."""
+        if not self.cwe_id and self.category:
+            cwe = CWE_MAPPING.get(self.category.value, {})
+            if cwe:
+                object.__setattr__(self, 'cwe_id', cwe['id'])
+                object.__setattr__(self, 'cwe_name', cwe['name'])
 
 
 class AnalysisResult(BaseModel):

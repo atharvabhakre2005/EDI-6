@@ -1,0 +1,17 @@
+{
+  "3e71df75db495e4464ed45cb5e907ac961fa38e3fdda7d98d7497a6b889d17ce": {
+    "sample_id": "S001",
+    "cached_at": "2026-05-16T22:34:07.628471",
+    "code_preview": "#include <stdio.h>\r #include <stdlib.h>\r #include <string.h>\r \r char* get_user_g"
+  },
+  "f2917d7a84f9a996ea063853c64f82557c29dc3d7c164cc29a07dc8f03f046f7": {
+    "sample_id": "S002",
+    "cached_at": "2026-05-16T22:34:49.292267",
+    "code_preview": "#include <stdio.h>\r #include <stdlib.h>\r #include <string.h>\r \r void process_inp"
+  },
+  "7074ae87db35fba54999f55ac806054e672ee99eafa897c6dc2d1c83c487c848": {
+    "sample_id": "S003",
+    "cached_at": "2026-05-16T22:42:48.743247",
+    "code_preview": "#include <stdio.h>\r #include <stdlib.h>\r #include <string.h>\r #include <unistd.h"
+  }
+}
